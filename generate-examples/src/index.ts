@@ -53,7 +53,7 @@ export class Signer {
     this.signingKey = signingKey;
   }
 
-  async signJws(idTokenPayload: Record<string, unknown>, deflate = true): Promise<string> {
+  async signJws(idTokenPayload: Record<string, unknown>, deflate = _doDeflate): Promise<string> {
     const bodyString = JSON.stringify(idTokenPayload);
 
     const fields = deflate ? { zip: 'DEF' } : {};
@@ -160,10 +160,12 @@ const toNumericQr = (jws: string): QRCodeSegment[] => [
 
 async function processExampleBundle(exampleBundleUrl: string) {
   const exampleBundleRetrieved = (await got(exampleBundleUrl).json()) as Bundle;
+  if (_longFhirBundle) {
+    exampleBundleRetrieved.entry.push(_longFhirBundle);
+  }
   const exampleBundleTrimmedForHealthCard = await trimBundleForHealthCard(exampleBundleRetrieved);
   const exampleJwsPayload = createHealthCardJwsPayload(exampleBundleTrimmedForHealthCard);
   const exampleBundleHealthCardFile = await createHealthCardFile(exampleJwsPayload);
-
   const qrSegments = toNumericQr(exampleBundleHealthCardFile.verifiableCredential[0]);
   const exampleBundleHealthCardNumericQr = qrSegments.map(({ data }) => data).join('');
 
@@ -231,6 +233,7 @@ async function generate(options: { outdir: string, testcase:string }) {
 const program = new Command();
 program.option('-o, --outdir <outdir>', 'output directory');
 program.addOption(new Option('-t, --testcase <testcase>', 'test case to generate').choices([
+  'no_deflate',
   'invalid_deflate',
   'invalid_jws_format',
   'invalid_issuer_url',
@@ -240,7 +243,8 @@ program.addOption(new Option('-t, --testcase <testcase>', 'test case to generate
   'wrong_issuer_curve_key',
   'wrong_issuer_kid_key',
   'wrong_issuer_kty_key',
-  'invalid_healthcard_uri'
+  'invalid_healthcard_uri',
+  'jws_too_long'
 ]));
 program.parse(process.argv);
 
@@ -253,7 +257,16 @@ const options = program.opts() as Options;
 console.log('Opts', options);
 
 // Test case options
-const _deflateFunction = options.testcase == 'invalid_deflate' ? pako.deflateRaw : pako.deflate;
+const _longFhirBundle = options.testcase == 'jws_too_long' ?  
+  {
+    "fullUrl": "resource:4",
+    "resource": {
+      "resourceType": "Location",
+      "name": "This_is_a_very_looooooooong_name_exceeding_the_1195_characters_limit_for_endoded_JWS_Nihu0phIkh883sjklkjf#kjhsdf8h3kjSdkjhf8gkkjhdgvJr5fzC34BPPMDfMhOycdSE3EmxzSJlsa4BADA7mGAjBlwjl6f28YOh71oNN8dZ5EQacHQvsvjeS3lJDu14lqiVGCl1YJ0Qs2TVaW5XUDNSf7p2f7Myy2ByZ1jzU7QUtuCGFyYj31OsHQNKgbYcfisIWoMvDQTLGU8skhkhlkjfFkwhfwy7y7yBIOU2TOB7hbh98gn98938jng98j39ngjUEYfQlLiVv0BvPwStmMS69vOk8BAAk"
+    }
+  } : null;
+const _doDeflate = options.testcase == 'no_deflate' ? false : true;
+const _deflateFunction = options.testcase == 'invalid_deflate' ? pako.deflate : pako.deflateRaw;
 const _jwsFormat = options.testcase == 'invalid_jws_format' ? 'flattened' : 'compact';
 const _issuerUrlSuffix = options.testcase == 'invalid_issuer_url' ? 'invalid_url' : '';
 const _qrHeader = options.testcase == 'wrong_qr_header' ? 'shc:' : 'shc:/';
