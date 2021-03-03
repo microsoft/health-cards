@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+Chunk-based QR representation of larger Health Cards (JWS > 1195 characters). Defines `shc:/<n>/<c>/` prefix, where `<n>` represents a chunk number and `<c>` represents the total chunk count.
+
+## 0.1.1
+
+Added `shc:/` prefix for QR representations.
+
 ## 0.1.0
 
 Significant API overhaul to reduce scope and simplify dependencies. See [PR#64](https://github.com/smart-on-fhir/health-cards/pull/64) for details.
