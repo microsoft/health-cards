@@ -143,13 +143,13 @@ function createHealthCardJwsPayload(fhirBundle: Bundle, types: string[]): Record
 const MAX_SINGLE_JWS_SIZE = 1195;
 const MAX_CHUNK_SIZE = 1191;
 const splitJwsIntoChunks = (jws: string): string[] => {
-  if (jws.length <= MAX_SINGLE_JWS_SIZE) {
+  if (jws.length <= _MAX_SINGLE_JWS_SIZE) {
     return [jws];
   }
 
   let chunks = [];
-  for (let i = 0; i < jws.length / MAX_CHUNK_SIZE; i++) {
-    chunks.push(jws.slice(i * MAX_CHUNK_SIZE, (i + 1) * MAX_CHUNK_SIZE))
+  for (let i = 0; i < jws.length / _MAX_CHUNK_SIZE; i++) {
+    chunks.push(jws.slice(i * _MAX_CHUNK_SIZE, (i + 1) * _MAX_CHUNK_SIZE))
   }
 
   return chunks;
@@ -183,9 +183,11 @@ async function processExampleBundle(exampleBundleUrl: string): Promise<{ fhirBun
   ] : [];
 
   const exampleBundleRetrieved = (await got(exampleBundleUrl).json()) as Bundle;
+  /* FIXME
   if (_longFhirBundle) {
     exampleBundleRetrieved.entry.push(_longFhirBundle);
   }
+  */
   const exampleBundleTrimmedForHealthCard = await trimBundleForHealthCard(exampleBundleRetrieved);
   const exampleJwsPayload = createHealthCardJwsPayload(exampleBundleTrimmedForHealthCard, types);
   const exampleBundleHealthCardFile = await createHealthCardFile(exampleJwsPayload);
@@ -277,7 +279,8 @@ program.addOption(new Option('-t, --testcase <testcase>', 'test case to generate
   'wrong_issuer_kid_key',
   'wrong_issuer_kty_key',
   'invalid_healthcard_uri',
-  'jws_too_long'
+  'qr_chunk_too_big',
+  'qr_chunk_unbalanced' // TODO
 ]));
 program.parse(process.argv);
 
@@ -290,14 +293,8 @@ const options = program.opts() as Options;
 console.log('Opts', options);
 
 // Test case options
-const _longFhirBundle = options.testcase == 'jws_too_long' ?  
-  {
-    "fullUrl": "resource:4",
-    "resource": {
-      "resourceType": "Location",
-      "name": "This_is_a_very_looooooooong_name_exceeding_the_1195_characters_limit_for_endoded_JWS_Nihu0phIkh883sjklkjf#kjhsdf8h3kjSdkjhf8gkkjhdgvJr5fzC34BPPMDfMhOycdSE3EmxzSJlsa4BADA7mGAjBlwjl6f28YOh71oNN8dZ5EQacHQvsvjeS3lJDu14lqiVGCl1YJ0Qs2TVaW5XUDNSf7p2f7Myy2ByZ1jzU7QUtuCGFyYj31OsHQNKgbYcfisIWoMvDQTLGU8skhkhlkjfFkwhfwy7y7yBIOU2TOB7hbh98gn98938jng98j39ngjUEYfQlLiVv0BvPwStmMS69vOk8BAAk"
-    }
-  } : null;
+const _MAX_SINGLE_JWS_SIZE = 'qr_chunk_too_big' ? 2500 : MAX_SINGLE_JWS_SIZE;
+const _MAX_CHUNK_SIZE = _MAX_SINGLE_JWS_SIZE - 4;
 const _doDeflate = options.testcase == 'no_deflate' ? false : true;
 const _deflateFunction = options.testcase == 'invalid_deflate' ? pako.deflate : pako.deflateRaw;
 const _jwsFormat = options.testcase == 'invalid_jws_format' ? 'flattened' : 'compact';
