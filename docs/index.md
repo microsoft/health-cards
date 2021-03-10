@@ -83,7 +83,7 @@ At a _pilot project level_:
 ### Which Issuers can participate?
 * We'll work with a willing set of issuers and define expectations/requirements
 * Verifiers will learn the list of participating issuers out of band; each issuer will be associated with a public URL
-* Verifiers will discover public keys associated with an issuer via `.well-known/jwks.json` URLs
+* Verifiers will discover public keys associated with an issuer via `/.well-known/jwks.json` URLs
 * For transparency, we'll publish a list of participating organizations in a public directory
 * In a _post-pilot deployment_, a network of participants would define and agree to a formal Trust Framework
 
@@ -110,16 +110,16 @@ This framework defines a general approach to **representing demographic and clin
 The following key types are used in the Health Cards Framework, represented as JSON Web Keys (see [RFC 7517](https://tools.ietf.org/html/rfc7517)):
 
 * **Signing Keys**
-    * MUST have `"kty": "EC"`, `"use": "sig"`, and `"alg": "ES256"`
-    * MUST have `"kid"` equal to the base64url-encoded SHA-256 JWK Thumbprint of the key (see [RFC7638](https://tools.ietf.org/html/rfc7638))
-    * Signing *Health Cards* (a.k.a. Verifiable Credentials)
-        * Issuers sign Health Card VCs with a signing key (private key)
-        * Issuer publish their signing keys (public key) at `.well-known/jwks.json`
+    * SHALL have `"kty": "EC"`, `"use": "sig"`, and `"alg": "ES256"`
+    * SHALL have `"kid"` equal to the base64url-encoded SHA-256 JWK Thumbprint of the key (see [RFC7638](https://tools.ietf.org/html/rfc7638))
+    * Signing *Health Cards*
+        * Issuers sign Health Card VCs (Verifiable Credentials) with a signing key (private key)
+        * Issuer publish their signing keys (public key) at `/.well-known/jwks.json`
         * Wallets and Verifiers validate Issuer signatures on Health Cards
 
 ### Determining keys associated with an issuer
 
-Issuers SHALL publish keys as JSON Web Key Sets (see [RFC7517](https://tools.ietf.org/html/rfc7517#section-5)), available at `<<iss value from Signed JWT>>` + `.well-known/jwks.json`.
+Issuers SHALL publish keys as JSON Web Key Sets (see [RFC7517](https://tools.ietf.org/html/rfc7517#section-5)), available at `<<iss value from Signed JWT>>` + `/.well-known/jwks.json`.
 
 The URL at `<<iss value from Signed JWT>>` SHALL NOT include a trailing `/`. For example, `https://smarthealth.cards/examples/issuer` is a valid `iss` value (`https://smarthealth.cards/examples/issuer/` is **not**).
 
@@ -195,7 +195,7 @@ Hence, the overall JWS payload matches the following structure (before it is [mi
 
 ### Health Cards are Small
 
-To ensure that all Health Cards can be represented in QR Codes, the following constraints apply at the time of issuance:
+To ensure that all Health Cards can be represented in QR Codes, issuers SHALL ensure that the following constraints apply at the time of issuance:
 
 * JWS Header
     * header includes `zip: "DEF"`
@@ -238,12 +238,12 @@ Alternatively, issuers can make the Health Card available **embedded in a QR cod
 
 Finally, the Health Wallet asks the user if they want to save any/all of the supplied credentials.
 
-### via FHIR `$HealthWallet.issueVc` Operation
+### via FHIR `$health-cards-issue` Operation
 
-For a more seamless user experience when FHIR API connections are already in place, results may also be conveyed through a FHIR API `$HealthWallet.issueVc` operation defined here. For issuers that support SMART on FHIR access, the Health Wallet MAY request authorization with SMART on FHIR scopes (e.g., `launch/patient patient/Immunization.read` for an Immunization use case). This allows the Health Wallet to automatically request issuance of VCs, including requests for periodic updates.
+For a more seamless user experience when FHIR API connections are already in place, results may also be conveyed through a FHIR API `$health-cards-issue` operation defined [here](../artifacts/operation-patient-i-health-cards-issue.json). For issuers that support SMART on FHIR access, the Health Wallet MAY request authorization with SMART on FHIR scopes (e.g., `launch/patient patient/Immunization.read` for an Immunization use case). This allows the Health Wallet to automatically request issuance of VCs, including requests for periodic updates.
 
 #### Discovery of FHIR Support
-A SMART on FHIR Server advertises support for issuing VCs according to this specification by adding the `health-cards` capability to its `.well-known/smart-configuration` JSON file. For example:
+A SMART on FHIR Server advertises support for issuing VCs according to this specification by adding the `health-cards` capability to its `/.well-known/smart-configuration` JSON file. For example:
 
 ```
 {
@@ -257,9 +257,9 @@ A SMART on FHIR Server advertises support for issuing VCs according to this spec
 ```
 
 <a name="healthwalletissuevc-operation"></a>
-#### `$HealthWallet.issueVc` Operation
+#### `$health-cards-issue` Operation
 
-A Health Wallet can `POST /Patient/:id/$HealthWallet.issueVc` to a FHIR-enabled issuer to request the generation of a specific type of Health Card. The body of the POST looks like:
+A Health Wallet can `POST /Patient/:id/$health-cards-issue` to a FHIR-enabled issuer to request the generation of a specific type of Health Card. The body of the POST looks like:
 
 ```json
 {
@@ -271,7 +271,9 @@ A Health Wallet can `POST /Patient/:id/$HealthWallet.issueVc` to a FHIR-enabled 
 }
 ```
 
-The `credentialType` parameter is required. By default, the issuer will decide which identity claims to include, based on profile-driven guidance. If the Health Wallet wants to fine-tune identity claims in the generated credentials, it can provide an explicit list of one or more `includeIdentityClaim`s, which will limit the claims included in the VC. For example, to request that only name be included:
+The `credentialType` parameter is required. The following parameters are optional; clients MAY include them in a request, and servers MAY ignore them if present.
+
+* **`includeIdentityClaim`**. By default, the issuer will decide which identity claims to include, based on profile-driven guidance. If the Health Wallet wants to fine-tune identity claims in the generated credentials, it can provide an explicit list of one or more `includeIdentityClaim`s, which will limit the claims included in the VC. For example, to request that only name be included:
 
 ```json
 {
@@ -286,6 +288,23 @@ The `credentialType` parameter is required. By default, the issuer will decide w
 }
 ```
 
+* **`_since`**. By default, the issuer will return health cards of any age. If the Health Wallet wants to request only cards pertaining to data since a specific point in time, it can provide a `_since` parameter with a `valueDateTime` (which is an ISO8601 string at the level of a year, month, day, or specific time of day using the extended time format; see [FHIR dateTime datatype](http://hl7.org/fhir/datatypes.html#dateTime) for details). For example, to request only COVID-19 data since March 2021:
+
+
+```json
+{
+  "resourceType": "Parameters",
+  "parameter": [{
+    "name": "credentialType",
+    "valueUri": "https://smarthealth.cards#covid19"
+  }, {
+    "name": "_since",
+    "valueDateTime": "2021-03"
+  }]
+}
+```
+
+
 The **response** is a `Parameters` resource that includes one more more `verifiableCredential` values like:
 
 ```json
@@ -298,7 +317,7 @@ The **response** is a `Parameters` resource that includes one more more `verifia
 }
 ```
 
-In the response, an optional repeating `resourceLink` parameter can capture the link between hosted FHIR resources and their derived representations within the verifiable credential's `.credentialSubject.fhirBundle`, allowing the health wallet to explictily understand these correspondences between `bundledResource` and `hostedResource`, without baking details about the hosted endpoint into the signed credential:
+In the response, an optional repeating `resourceLink` parameter can capture the link between any number of hosted FHIR resources and their derived representations within the verifiable credential's `.credentialSubject.fhirBundle`, allowing the health wallet to explictily understand these correspondences between `bundledResource` and `hostedResource`, without baking details about the hosted endpoint into the signed credential:
 
 ```json
 {

@@ -99,6 +99,9 @@ async function trimBundleForHealthCard(bundleIn: Bundle) {
       }
       if (resourceUrlMap[r.reference]) {
         r.reference = resourceUrlMap[r.reference];
+      } else if (r?.reference?.startsWith("Patient")) {
+        //TODO remove this branch when DVCI bundles are fixed
+        r.reference = 'resource:0'
       }
       if (r.coding) {
         delete r.text;
@@ -147,12 +150,11 @@ const splitJwsIntoChunks = (jws: string): string[] => {
     return [jws];
   }
 
-  let chunks = [];
-  for (let i = 0; i < jws.length / _MAX_CHUNK_SIZE; i++) {
-    chunks.push(jws.slice(i * _MAX_CHUNK_SIZE, (i + 1) * _MAX_CHUNK_SIZE))
-  }
-
-  return chunks;
+  // Try to split the chunks into roughly equal sizes.
+  const chunkCount = Math.ceil(jws.length / _MAX_CHUNK_SIZE);
+  const chunkSize = Math.ceil(jws.length / chunkCount);
+  const chunks = jws.match(new RegExp(`.{1,${chunkSize}}`, 'g'));
+  return chunks || [];
 }
 
 async function createHealthCardFile(jwsPayload: Record<string, unknown>): Promise<Record<string, any>> {
@@ -183,11 +185,6 @@ async function processExampleBundle(exampleBundleUrl: string): Promise<{ fhirBun
   ] : [];
 
   const exampleBundleRetrieved = (await got(exampleBundleUrl).json()) as Bundle;
-  /* FIXME
-  if (_longFhirBundle) {
-    exampleBundleRetrieved.entry.push(_longFhirBundle);
-  }
-  */
   const exampleBundleTrimmedForHealthCard = await trimBundleForHealthCard(exampleBundleRetrieved);
   const exampleJwsPayload = createHealthCardJwsPayload(exampleBundleTrimmedForHealthCard, types);
   const exampleBundleHealthCardFile = await createHealthCardFile(exampleJwsPayload);
