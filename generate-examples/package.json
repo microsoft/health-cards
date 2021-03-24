@@ -5,7 +5,7 @@
   "main": "src/index.ts",
   "scripts": {
     "generate-examples": "ts-node src/index.ts --outdir ../docs/examples",
-    "generate-testfiles": "ts-node src/index.ts --outdir testfiles --testcase invalid_issuer_url",
+    "generate-testfiles": "ts-node src/index.ts --outdir testfiles --testcase trailing_chars",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

@@ -229,13 +229,13 @@ async function generate(options: { outdir: string, testcase:string }) {
     const fileF = example.qrNumeric.map((qr, i) => `${outputPrefix}f-qr-code-numeric-value-${i}${ouputSuffix}.txt`);
     const fileG = example.qrSvgFiles.map((qr, i) => `${outputPrefix}g-qr-code-${i}${ouputSuffix}.svg`);
 
-    fs.writeFileSync(`${options.outdir}/${fileA}`, JSON.stringify(example.fhirBundle, null, 2));
-    fs.writeFileSync(`${options.outdir}/${fileB}`, JSON.stringify(example.payload, null, 2));
-    fs.writeFileSync(`${options.outdir}/${fileC}`, JSON.stringify(example.payload));
-    fs.writeFileSync(`${options.outdir}/${fileD}`, example.file.verifiableCredential[0]);
-    fs.writeFileSync(`${options.outdir}/${fileE}`, JSON.stringify(example.file, null, 2));
+    fs.writeFileSync(`${options.outdir}/${fileA}`, _TRAILING_CHARS + JSON.stringify(example.fhirBundle, null, 2) + _TRAILING_CHARS);
+    fs.writeFileSync(`${options.outdir}/${fileB}`, _TRAILING_CHARS + JSON.stringify(example.payload, null, 2) + _TRAILING_CHARS);
+    fs.writeFileSync(`${options.outdir}/${fileC}`, _TRAILING_CHARS + JSON.stringify(example.payload) + _TRAILING_CHARS);
+    fs.writeFileSync(`${options.outdir}/${fileD}`, _TRAILING_CHARS + example.file.verifiableCredential[0] + _TRAILING_CHARS);
+    fs.writeFileSync(`${options.outdir}/${fileE}`, _TRAILING_CHARS + JSON.stringify(example.file, null, 2) + _TRAILING_CHARS);
     example.qrNumeric.forEach((qr, i) => {
-      fs.writeFileSync(`${options.outdir}/${fileF[i]}`, qr);
+      fs.writeFileSync(`${options.outdir}/${fileF[i]}`, _TRAILING_CHARS + qr + _TRAILING_CHARS);
     });
 
     example.qrSvgFiles.forEach((qr, i) => {
@@ -277,7 +277,8 @@ program.addOption(new Option('-t, --testcase <testcase>', 'test case to generate
   'wrong_issuer_kty_key',
   'invalid_healthcard_uri',
   'qr_chunk_too_big',
-  'qr_chunk_unbalanced' // TODO
+  'qr_chunk_unbalanced', // TODO
+  'trailing_chars'
 ]));
 program.parse(process.argv);
 
@@ -290,6 +291,7 @@ const options = program.opts() as Options;
 console.log('Opts', options);
 
 // Test case options
+const _TRAILING_CHARS = 'trailing_chars' ? ' \t\n ' : '';
 const _MAX_SINGLE_JWS_SIZE = 'qr_chunk_too_big' ? 2500 : MAX_SINGLE_JWS_SIZE;
 const _MAX_CHUNK_SIZE = _MAX_SINGLE_JWS_SIZE - 4;
 const _doDeflate = options.testcase == 'no_deflate' ? false : true;
