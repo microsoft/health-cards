@@ -67,7 +67,7 @@ This section outlines higher-level design considerations. See [Protocol Details]
 
 ### Getting credentials into Health Wallet
 * Required method: File download
-* Required method: QR scan
+* Required method: print QR on paper card, or scan QR into software
 * Optional method: [FHIR API Access](#healthwalletissuevc-operation)
 
 ### Presenting credentials to Verifier
@@ -90,10 +90,20 @@ At a _pilot project level_:
 
 ## Privacy
 
+### Data Minimization
+
 It is an explicit design goal to let the holder **only disclose a minimum amount of information** to a verifier. The information _required_ to be disclosed is use-case dependent, and -- particularly in a healthcare setting -- it can be difficult for lay people to judge which data elements are necessary to be shared.
 
-To start, the granularity of information disclosure will be at the level of an entire credential (i.e., a user can select "which cards" to share from a Health Wallet, and each card is shared wholesale). The credentials are designed to only include the minimum information necessary for a given use case.
+The granularity of information disclosure will be at the level of an entire credential (i.e., a user can select "which cards" to share from a Health Wallet, and each card is shared wholesale). The credentials are designed to only include the minimum information necessary for a given use case.
 
+ ### Granular Sharing
+
+ Data holders should have full control over the data they choose to share for a particular use-case. Since Health Cards are signed by the issuer and cannot be altered later, it is important to ensure that Health Cards are created with granular sharing in mind. Therefore, issuers SHOULD only combine distinct data elements into a Health Card when a Health Card FHIR profile requires it.
+
+ Additionally, Health Card FHIR Profiles SHOULD only include data that need to be conveyed together. E.g., immunizations for different diseases should be kept separate. Immunizations and lab results should be kept separate.
+
+ ### Future Considerations
+ 
 If we identify *optional* data elements for a given use case, we might incorporate them into credentials by including a cryptographic hash of their values instead of embedding values directly. Longer term we can provide more granular options using techniques like zero-knowledge proofs, or by allowing a trusted intermediary to summarize results in a just-in-time fashion.
 
 ## Data Model
@@ -107,23 +117,34 @@ This framework defines a general approach to **representing demographic and clin
 
 ## Generating and resolving cryptographic keys
 
-The following key types are used in the Health Cards Framework, represented as JSON Web Keys (see [RFC 7517](https://tools.ietf.org/html/rfc7517)):
+The following key types are used in the Health Cards Framework:
 
-* **Signing Keys**
-    * SHALL have `"kty": "EC"`, `"use": "sig"`, and `"alg": "ES256"`
-    * SHALL have `"kid"` equal to the base64url-encoded SHA-256 JWK Thumbprint of the key (see [RFC7638](https://tools.ietf.org/html/rfc7638))
-    * Signing *Health Cards*
-        * Issuers sign Health Card VCs (Verifiable Credentials) with a signing key (private key)
-        * Issuer publish their signing keys (public key) at `/.well-known/jwks.json`
-        * Wallets and Verifiers validate Issuer signatures on Health Cards
+* Elliptic Curve keys using the P-256 curve
+
+### Signing *Health Cards*
+
+* Issuers sign Health Card VCs (Verifiable Credentials) with a signing key (private key)
+* Issuer publish the corresponding public key (public key) at `/.well-known/jwks.json`
+* Wallets and Verifiers use the public key to verify Issuer signatures on Health Cards
 
 ### Determining keys associated with an issuer
 
-Issuers SHALL publish keys as JSON Web Key Sets (see [RFC7517](https://tools.ietf.org/html/rfc7517#section-5)), available at `<<iss value from Signed JWT>>` + `/.well-known/jwks.json`.
+Each public key used to verify signatures is represented as a JSON Web Key (see [RFC 7517](https://tools.ietf.org/html/rfc7517)):
 
-The URL at `<<iss value from Signed JWT>>` SHALL NOT include a trailing `/`. For example, `https://smarthealth.cards/examples/issuer` is a valid `iss` value (`https://smarthealth.cards/examples/issuer/` is **not**).
+* SHALL have `"kty": "EC"`, `"use": "sig"`, and `"alg": "ES256"`
+* SHALL have `"kid"` equal to the base64url-encoded SHA-256 JWK Thumbprint of the key (see [RFC7638](https://tools.ietf.org/html/rfc7638))
+* SHALL have `"crv": "P-256`, and `"x"`, `"y"` equal to the base64url-encoded values for the public Elliptic Curve point coordinates (see [RFC7518](https://tools.ietf.org/html/rfc7518#section-6.2))
+* SHALL NOT have the Elliptic Curve private key parameter `"d"`
+* If the issuer has an X.509 certificate for the public key, SHALL have `"x5c"` equal to an array of one or more base64-encoded (not base64url-encoded) DER representations of the public
+certificate or certificate chain (see [RFC7517](https://tools.ietf.org/html/rfc7517#section-4.7)).
+The public key listed in the first certificate in the `"x5c"` array SHALL match the public key specified by the `"crv"`, `"x"`, and `"y"` parameters of the same JWK entry.
+If the issuer has more than one certificate for the same public key (e.g. participation in more than one trust community), then a separate JWK entry is used for each certificate with all JWK parameter values identical except `"x5c"`.
 
-**Signing keys** in the `.keys[]` array can be identified by `kid` following the requirements above (i.e., by filtering on `kty`, `use`, and `alg`)
+Issuers SHALL publish their public keys as JSON Web Key Sets (see [RFC7517](https://tools.ietf.org/html/rfc7517#section-5)), available at `<<iss value from Signed JWT>>` + `/.well-known/jwks.json`.
+
+The URL at `<<iss value from Signed JWT>>` SHALL use the `https` scheme and SHALL NOT include a trailing `/`. For example, `https://smarthealth.cards/examples/issuer` is a valid `iss` value (`https://smarthealth.cards/examples/issuer/` is **not**).
+
+**Signing keys** in the `.keys[]` array can be identified by `kid` following the requirements above (i.e., by filtering on `kty`, `use`, and `alg`).
 
  For example, the following is a fragment of a jwks.json file with one signing key:
 ```
@@ -141,6 +162,32 @@ The URL at `<<iss value from Signed JWT>>` SHALL NOT include a trailing `/`. For
   ]
 }
 ```
+
+### Certificates
+
+X.509 certificates can be used by issuers to indicate the issuer's participation in a PKI-based trust framework.
+
+If the Verifier supports PKI-based trust frameworks and the Health Card issuer includes the `"x5c"` parameter in matching JWK entries from the `.keys[]` array,
+the Verifier establishes that the issuer is trusted as follows:
+1. Verifier validates the leaf certificate's binding to the Health Card issuer by:
+    * matching the `<<iss value from Signed JWT>>` to the value
+of a `uniformResourceIdentifier` entry in the certificate's Subject Alternative Name extension
+(see [RFC5280](https://tools.ietf.org/html/rfc5280#section-4.2.1.6)), and
+    * verifying the signature in the Health Card using the public key in the certificate.
+2. Verifier constructs a valid certificate path of unexpired and unrevoked certificates to one of its trusted anchors
+ (see [RFC5280](https://tools.ietf.org/html/rfc5280#section-6)).
+
+
+### Key Management
+
+Issuers SHOULD generate new signing keys at least annually. 
+
+When an issuer generates a new key to sign Health Cards, the public key SHALL be added to the
+issuer's JWK set in its jwks.json file. Retired private keys that are no longer used to sign Health Cards SHALL be destroyed.
+Older public key entries that are needed to validate previously
+signed health cards SHALL remain in the JWK set for as long as the corresponding health cards
+are clinically relevant. However, if a private signing key is compromised, then the issuer SHALL immediately remove the corresponding public key
+from the JWK set in its jwks.json file and request revocation of all X.509 certificates bound to that public key.
 
 ## Issuer Generates Results
 
@@ -271,7 +318,10 @@ A Health Wallet can `POST /Patient/:id/$health-cards-issue` to a FHIR-enabled is
 }
 ```
 
-The `credentialType` parameter is required. The following parameters are optional; clients MAY include them in a request, and servers MAY ignore them if present.
+The `credentialType` parameter is required. Multiple `credentialType` values in one request SHALL be intepreted as a request for the intersection of the requested types (logical AND).
+For example, a request containing `credentialType` values `https://smarthealth.cards#covid19` and `https://smarthealth.cards#immunization` is a request for only those cards that are both Covid-19 cards and immunization cards (i.e., only those Covid-19 cards that are about immunizations).
+
+The following parameters are optional; clients MAY include them in a request, and servers MAY ignore them if present.
 
 * **`includeIdentityClaim`**. By default, the issuer will decide which identity claims to include, based on profile-driven guidance. If the Health Wallet wants to fine-tune identity claims in the generated credentials, it can provide an explicit list of one or more `includeIdentityClaim`s, which will limit the claims included in the VC. For example, to request that only name be included:
 
@@ -312,19 +362,25 @@ The **response** is a `Parameters` resource that includes one more more `verifia
   "resourceType": "Parameters",
   "parameter":[{
     "name": "verifiableCredential",
-    "valueString": "<<Health Cards as JWS>>"
+    "valueString": "<<Health Card as JWS>>"
   }]
 }
 ```
 
-In the response, an optional repeating `resourceLink` parameter can capture the link between any number of hosted FHIR resources and their derived representations within the verifiable credential's `.credentialSubject.fhirBundle`, allowing the health wallet to explictily understand these correspondences between `bundledResource` and `hostedResource`, without baking details about the hosted endpoint into the signed credential:
+In the response, an optional repeating `resourceLink` parameter can capture the link between any number of hosted FHIR resources and their derived representations within the verifiable credential's `.credentialSubject.fhirBundle`, allowing the health wallet to explictily understand these correspondences between `bundledResource` and `hostedResource`, without baking details about the hosted endpoint into the signed credential. The optional `vcIndex` value on a `resourceLink` can be used when a response contains more than one VC, to indicate which VC this resource link applies to. The `vcIndex` is a zero-based index of a `verifiableCredential` entry within the top-level `parameter` array.
 
 ```json
 {
   "resourceType": "Parameters",
   "parameter": [{
+    "name": "verifiableCredential",
+    "valueString": "<<Health Card as JWS>>"
+  }, {
     "name": "resourceLink",
     "part": [{
+        "name": "vcIndex",
+        "valueInteger": 0
+      }, {
         "name": "bundledResource",
         "valueUri": "resource:2"
       }, {

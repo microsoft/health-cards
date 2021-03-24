@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.1
+
+Added optional `x5c` in JWKS
+
+## 0.3.1
+
+Add optional `vcIndex` param on `$health-cards-issue` response's `resourceLink`
+
 ## 0.3.0
 
 Rename `$HealthWallet.issueVc` to `$health-cards-issue`
