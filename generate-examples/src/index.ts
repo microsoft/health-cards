@@ -7,7 +7,7 @@ import pako, { deflate, deflateRaw } from 'pako';
 import QrCode, { QRCodeSegment } from 'qrcode';
 
 
-const ISSUER_URL = process.env.ISSUER_URL || 'https://smarthealth.cards/examples/issuer' ;
+const ISSUER_URL = process.env.ISSUER_URL || 'smarthealth.cards/examples/issuer' ;
 
 const exampleBundleUrls = [
   'http://build.fhir.org/ig/dvci/vaccine-credential-ig/branches/main/Bundle-Scenario1Bundle.json',
@@ -126,7 +126,7 @@ async function trimBundleForHealthCard(bundleIn: Bundle) {
 
 function createHealthCardJwsPayload(fhirBundle: Bundle, types: string[]): Record<string, unknown> {
   return {
-    iss: ISSUER_URL + _issuerUrlSuffix,
+    iss: _issuerUrlPrefix + ISSUER_URL + _issuerUrlSuffix,
     iat: new Date().getTime() / 1000, // TODO: add not yet valid
     vc: {
       '@context': ['https://www.w3.org/2018/credentials/v1'],
@@ -271,6 +271,8 @@ program.addOption(new Option('-t, --testcase <testcase>', 'test case to generate
   'invalid_deflate',
   'invalid_jws_format',
   'invalid_issuer_url',
+  'issuer_url_with_trailing_slash',
+  'invalid_issuer_url_http',
   'wrong_qr_header',
   'wrong_qr_mode',
   'wrong_issuer_key',
@@ -293,13 +295,15 @@ const options = program.opts() as Options;
 console.log('Opts', options);
 
 // Test case options
-const _TRAILING_CHARS = 'trailing_chars' ? ' \t\n ' : '';
-const _MAX_SINGLE_JWS_SIZE = 'qr_chunk_too_big' ? 2500 : MAX_SINGLE_JWS_SIZE;
+const _TRAILING_CHARS = options.testcase == 'trailing_chars' ? ' \t\n ' : '';
+const _MAX_SINGLE_JWS_SIZE = options.testcase == 'qr_chunk_too_big' ? 2500 : MAX_SINGLE_JWS_SIZE;
 const _MAX_CHUNK_SIZE = _MAX_SINGLE_JWS_SIZE - 4;
 const _doDeflate = options.testcase == 'no_deflate' ? false : true;
 const _deflateFunction = options.testcase == 'invalid_deflate' ? pako.deflate : pako.deflateRaw;
 const _jwsFormat = options.testcase == 'invalid_jws_format' ? 'flattened' : 'compact';
-const _issuerUrlSuffix = options.testcase == 'invalid_issuer_url' ? 'invalid_url' : '';
+const _issuerUrlPrefix = options.testcase == 'invalid_issuer_url_http' ? 'http://' : 'https://';
+let _issuerUrlSuffix = options.testcase == 'invalid_issuer_url' ? 'invalid_url' : '';
+_issuerUrlSuffix = options.testcase == 'issuer_url_with_trailing_slash' ? '/' : '';
 const _qrHeader = options.testcase == 'wrong_qr_header' ? 'shc:' : 'shc:/';
 const _qrMode = options.testcase == 'wrong_qr_mode' ? 'byte' : 'numeric';
 const _issuerKeyFile = './src/config/' + 
