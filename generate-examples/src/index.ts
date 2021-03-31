@@ -126,7 +126,7 @@ async function trimBundleForHealthCard(bundleIn: Bundle) {
 
 function createHealthCardJwsPayload(fhirBundle: Bundle, types: string[]): Record<string, unknown> {
   return {
-    iss: _issuerUrlPrefix + ISSUER_URL + _issuerUrlSuffix,
+    iss: _issuerUrlPrefix + ISSUER_URL + _issuerUrlSuffix + _issuerUrlSuffix2,
     nbf: new Date().getTime() / 1000,
     vc: {
       '@context': ['https://www.w3.org/2018/credentials/v1'],
@@ -219,7 +219,7 @@ async function generate(options: { outdir: string, testcase:string }) {
       minimumIntegerDigits: 2,
       useGrouping: false,
     });
-    const outputPrefix = `example-${exNum}-`;
+    const outputPrefix = _OUTPUT_PREFIX + `example-${exNum}-`;
     const ouputSuffix = options.testcase ? `-${options.testcase}` : '';
     const example = await processExampleBundle(url);
     const fileA = `${outputPrefix}a-fhirBundle${ouputSuffix}.json`;
@@ -295,6 +295,7 @@ const options = program.opts() as Options;
 console.log('Opts', options);
 
 // Test case options
+const _OUTPUT_PREFIX = options.testcase ? 'test-' : '';
 const _TRAILING_CHARS = options.testcase == 'trailing_chars' ? ' \t\n ' : '';
 const _MAX_SINGLE_JWS_SIZE = options.testcase == 'qr_chunk_too_big' ? 2500 : MAX_SINGLE_JWS_SIZE;
 const _MAX_CHUNK_SIZE = _MAX_SINGLE_JWS_SIZE - 4;
@@ -302,8 +303,8 @@ const _doDeflate = options.testcase == 'no_deflate' ? false : true;
 const _deflateFunction = options.testcase == 'invalid_deflate' ? pako.deflate : pako.deflateRaw;
 const _jwsFormat = options.testcase == 'invalid_jws_format' ? 'flattened' : 'compact';
 const _issuerUrlPrefix = options.testcase == 'invalid_issuer_url_http' ? 'http://' : 'https://';
-let _issuerUrlSuffix = options.testcase == 'invalid_issuer_url' ? 'invalid_url' : '';
-_issuerUrlSuffix = options.testcase == 'issuer_url_with_trailing_slash' ? '/' : '';
+const _issuerUrlSuffix = options.testcase == 'invalid_issuer_url' ? 'invalid_url' : '';
+const _issuerUrlSuffix2 = options.testcase == 'issuer_url_with_trailing_slash' ? '/' : '';
 const _qrHeader = options.testcase == 'wrong_qr_header' ? 'shc:' : 'shc:/';
 const _qrMode = options.testcase == 'wrong_qr_mode' ? 'byte' : 'numeric';
 const _issuerKeyFile = './src/config/' + 
