@@ -51,7 +51,7 @@ Despite this broad scope, our *short-term definition of success* requires that w
 * **Connect** the Health Wallet to an account with the Issuer (optional step)
 * **Save** a Health Card from the Issuer into the Health Wallet
 * **Present** a Health Card to a Verifier
-    * Presentation incluldes explicit user opt-in and approval
+    * Presentation includes explicit user opt-in and approval
     * Presentation workflow depends on context (e.g., on-device presentation to a verifier's mobile app, or in-person presentation)
 
 ## Demo
@@ -67,7 +67,7 @@ This section outlines higher-level design considerations. See [Protocol Details]
 
 ### Getting credentials into Health Wallet
 * Required method: File download
-* Required method: print QR on paper card, or scan QR into software
+* Required method: Print QR on paper card, or scan QR into software
 * Optional method: [FHIR API Access](#healthwalletissuevc-operation)
 
 ### Presenting credentials to Verifier
@@ -96,13 +96,13 @@ It is an explicit design goal to let the holder **only disclose a minimum amount
 
 The granularity of information disclosure will be at the level of an entire credential (i.e., a user can select "which cards" to share from a Health Wallet, and each card is shared wholesale). The credentials are designed to only include the minimum information necessary for a given use case.
 
- ### Granular Sharing
+### Granular Sharing
 
- Data holders should have full control over the data they choose to share for a particular use-case. Since Health Cards are signed by the issuer and cannot be altered later, it is important to ensure that Health Cards are created with granular sharing in mind. Therefore, issuers SHOULD only combine distinct data elements into a Health Card when a Health Card FHIR profile requires it.
+Data holders should have full control over the data they choose to share for a particular use-case. Since Health Cards are signed by the issuer and cannot be altered later, it is important to ensure that Health Cards are created with granular sharing in mind. Therefore, issuers SHOULD only combine distinct data elements into a Health Card when a Health Card FHIR profile requires it.
 
- Additionally, Health Card FHIR Profiles SHOULD only include data that need to be conveyed together. E.g., immunizations for different diseases should be kept separate. Immunizations and lab results should be kept separate.
+Additionally, Health Card FHIR Profiles SHOULD only include data that need to be conveyed together. (e.g., immunizations for different diseases should be kept separate. Immunizations and lab results should be kept separate.)
 
- ### Future Considerations
+### Future Considerations
  
 If we identify *optional* data elements for a given use case, we might incorporate them into credentials by including a cryptographic hash of their values instead of embedding values directly. Longer term we can provide more granular options using techniques like zero-knowledge proofs, or by allowing a trusted intermediary to summarize results in a just-in-time fashion.
 
@@ -140,13 +140,13 @@ certificate or certificate chain (see [RFC7517](https://tools.ietf.org/html/rfc7
 The public key listed in the first certificate in the `"x5c"` array SHALL match the public key specified by the `"crv"`, `"x"`, and `"y"` parameters of the same JWK entry.
 If the issuer has more than one certificate for the same public key (e.g. participation in more than one trust community), then a separate JWK entry is used for each certificate with all JWK parameter values identical except `"x5c"`.
 
-Issuers SHALL publish their public keys as JSON Web Key Sets (see [RFC7517](https://tools.ietf.org/html/rfc7517#section-5)), available at `<<iss value from Signed JWT>>` + `/.well-known/jwks.json`.
+Issuers SHALL publish their public keys as JSON Web Key Sets (see [RFC7517](https://tools.ietf.org/html/rfc7517#section-5)), available at `<<iss value from Signed JWT>>` + `/.well-known/jwks.json`, with [Cross-Origin Resource Sharing (CORS)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin) enabled.
 
 The URL at `<<iss value from Signed JWT>>` SHALL use the `https` scheme and SHALL NOT include a trailing `/`. For example, `https://smarthealth.cards/examples/issuer` is a valid `iss` value (`https://smarthealth.cards/examples/issuer/` is **not**).
 
 **Signing keys** in the `.keys[]` array can be identified by `kid` following the requirements above (i.e., by filtering on `kty`, `use`, and `alg`).
 
- For example, the following is a fragment of a jwks.json file with one signing key:
+ For example, the following is a fragment of a `jwks.json` file with one signing key:
 ```
 {
   "keys":[
@@ -169,10 +169,11 @@ X.509 certificates can be used by issuers to indicate the issuer's participation
 
 If the Verifier supports PKI-based trust frameworks and the Health Card issuer includes the `"x5c"` parameter in matching JWK entries from the `.keys[]` array,
 the Verifier establishes that the issuer is trusted as follows:
+
 1. Verifier validates the leaf certificate's binding to the Health Card issuer by:
-    * matching the `<<iss value from Signed JWT>>` to the value
-of a `uniformResourceIdentifier` entry in the certificate's Subject Alternative Name extension
-(see [RFC5280](https://tools.ietf.org/html/rfc5280#section-4.2.1.6)), and
+    * matching the `<<iss value from Signed JWT>>` to the value of a `uniformResourceIdentifier` 
+    entry in the certificate's Subject Alternative Name extension 
+    (see [RFC5280](https://tools.ietf.org/html/rfc5280#section-4.21.6)), and
     * verifying the signature in the Health Card using the public key in the certificate.
 2. Verifier constructs a valid certificate path of unexpired and unrevoked certificates to one of its trusted anchors
  (see [RFC5280](https://tools.ietf.org/html/rfc5280#section-6)).
@@ -183,15 +184,15 @@ of a `uniformResourceIdentifier` entry in the certificate's Subject Alternative 
 Issuers SHOULD generate new signing keys at least annually. 
 
 When an issuer generates a new key to sign Health Cards, the public key SHALL be added to the
-issuer's JWK set in its jwks.json file. Retired private keys that are no longer used to sign Health Cards SHALL be destroyed.
+issuer's JWK set in its `jwks.json` file. Retired private keys that are no longer used to sign Health Cards SHALL be destroyed.
 Older public key entries that are needed to validate previously
-signed health cards SHALL remain in the JWK set for as long as the corresponding health cards
+signed Health Cards SHALL remain in the JWK set for as long as the corresponding Health Cards
 are clinically relevant. However, if a private signing key is compromised, then the issuer SHALL immediately remove the corresponding public key
-from the JWK set in its jwks.json file and request revocation of all X.509 certificates bound to that public key.
+from the JWK set in its `jwks.json` file and request revocation of all X.509 certificates bound to that public key.
 
 ## Issuer Generates Results
 
-When the issuer is ready to generate a Health Card, the issuer creates a FHIR payload and packs it into a corresponding Health Card VC (or Health Card Set), ensuring the resulting payloads follow the [QR Embedding requirements](#every-health-card-can-be-embedded-in-a-qr-code).
+When the issuer is ready to generate a Health Card, the issuer creates a FHIR payload and packs it into a corresponding Health Card VC (or Health Card Set).
 
 ```mermaid
 sequenceDiagram
@@ -200,7 +201,7 @@ participant Issuer
 
 note over Holder, Issuer: Earlier...
 Issuer ->> Issuer: Generate Issuer's keys
-Issuer ->> Issuer: If health card data for holder already exist: re-generate VCs
+Issuer ->> Issuer: If Health Card data for holder already exist: re-generate VCs
 
 note over Issuer, Holder: Data Created
 Issuer ->> Issuer: Generate FHIR Representation
@@ -213,14 +214,14 @@ Issuer ->> Holder: Holder receives Health Card
 
 ### Health Cards are encoded as Compact Serialization JSON Web Signatures (JWS)
 
-The VC structure (scaffold) is shown in the following example.  The Health Cards framework serializes VCs using the compact JWS serialization, i.e. each Health Card is a signed JSON Web Token. Specific encoding choices ensure compatibility with standard JWT claims, as described at [https://www.w3.org/TR/vc-data-model/#jwt-encoding](https://www.w3.org/TR/vc-data-model/#jwt-encoding). Specifically: in the JWT payload, most properties have been "pushed down" into a `.vc` claim; there is no top-level `issuer`, `issuanceDate`, `@context`, `type`, or `credentialSubject` property, because these fields are either mapped into standard JWT claims (for `iss`, `iat`) or included within the `.vc` claim (for `@context`, `type`, `credentialSubject`).
+The VC structure (scaffold) is shown in the following example.  The Health Cards framework serializes VCs using the compact JWS serialization, i.e. each Health Card is a signed JSON Web Token (see [Appendix 3 of RFC7515](https://tools.ietf.org/html/rfc7515#appendix-A.3) for an example using ECDSA P-256 SHA-256, as required by this specification). Specific encoding choices ensure compatibility with standard JWT claims, as described at [https://www.w3.org/TR/vc-data-model/#jwt-encoding](https://www.w3.org/TR/vc-data-model/#jwt-encoding).
 
-Hence, the overall JWS payload matches the following structure (before it is [minified and compressed](#health-cards-are-small)):
+The `@context`, `type`, and `credentialSubject` properties are added to the `vc` claim of the JWT. The `issuer` property is represented by the registered JWT `iss` claim and the `issuanceDate` property is represented by the registered JWT `nbf` claim.  Hence, the overall JWS payload matches the following structure (before it is [minified and compressed](#health-cards-are-small)):
 
 ```json
 {
   "iss": "<<Issuer URL>>",
-  "iat": 1591037940,
+  "nbf": 1591037940,
   "vc": {
     "@context": ["https://www.w3.org/2018/credentials/v1"],
     "type": [
@@ -264,7 +265,7 @@ For details about how to embed Health Cards in a QR code, [see below](#every-hea
 
 ## User Retrieves Health Cards
 
-In this step, the user learns that a new Health Card is available (e.g., by receiving a text message or email notification, or by an in-wallet notification for FHIR-enabled issuers.
+In this step, the user learns that a new Health Card is available (e.g., by receiving a text message or email notification, or by an in-wallet notification for FHIR-enabled issuers.)
 
 ### via File Download
 
@@ -338,7 +339,7 @@ The following parameters are optional; clients MAY include them in a request, an
 }
 ```
 
-* **`_since`**. By default, the issuer will return health cards of any age. If the Health Wallet wants to request only cards pertaining to data since a specific point in time, it can provide a `_since` parameter with a `valueDateTime` (which is an ISO8601 string at the level of a year, month, day, or specific time of day using the extended time format; see [FHIR dateTime datatype](http://hl7.org/fhir/datatypes.html#dateTime) for details). For example, to request only COVID-19 data since March 2021:
+* **`_since`**. By default, the issuer will return Health Cards of any age. If the Health Wallet wants to request only cards pertaining to data since a specific point in time, it can provide a `_since` parameter with a `valueDateTime` (which is an ISO8601 string at the level of a year, month, day, or specific time of day using the extended time format; see [FHIR dateTime datatype](http://hl7.org/fhir/datatypes.html#dateTime) for details). For example, to request only COVID-19 data since March 2021:
 
 
 ```json
@@ -393,17 +394,17 @@ In the response, an optional repeating `resourceLink` parameter can capture the 
 
 ## Presenting Health Cards to a Verifier
 
-In this step, the verifier asks the user to share a COVID-19 result. The overall can be conveyed by presenting a QR code; by uploading a file; or by leveraging device-specific APIs. Over time, we will endeavor to standardize presentation workflows including device-specific patterns and web-based exchange.
+In this step, the verifier asks the user to share a COVID-19 result. A Health Card containing the result can be conveyed by presenting a QR code; by uploading a file; or by leveraging device-specific APIs. Over time, we will endeavor to standardize presentation workflows including device-specific patterns and web-based exchange.
 
 ## Every Health Card can be embedded in a QR Code
 
-Every Health Card can be embedded in one or more QR Codes. When embedding a Health Card in a QR Code, we aim to ensure that printed (or electronically displayed) codes are usable at physical dimensions of 40mmx40mm. This constraint allows us to use QR codes up to Version 22, at 105x105 modules. When embedding a Health Card in a QR Code, the same JWS strings that appear as `.verifiableCredential[]` entries in a `.smart-health.card` file SHALL be encoded as Numerical Mode QR codes consisting of the digits 0-9 (see ["Encoding Chunks as QR Codes"](#encoding-chunks-as-qr-codes)).
+Every Health Card can be embedded in one or more QR Codes. When embedding a Health Card in a QR Code, we aim to ensure that printed (or electronically displayed) codes are usable at physical dimensions of 40mmx40mm. This constraint allows us to use QR codes up to Version 22, at 105x105 modules. When embedding a Health Card in a QR Code, the same JWS strings that appear as `.verifiableCredential[]` entries in a `.smart-health-card` file SHALL be encoded as Numerical Mode QR codes consisting of the digits 0-9 (see ["Encoding Chunks as QR Codes"](#encoding-chunks-as-qr-codes)).
 
 Ensuring Health Cards can be presented as QR Codes:
 
-* Allows basic storage and sharing of health cards for users without a smartphone
+* Allows basic storage and sharing of Health Cards for users without a smartphone
 * Allows smartphone-enabled users to print a usable backup
-* Allows full health card contents to be shared with a verifier
+* Allows full Health Card contents to be shared with a verifier
 
 The following limitations apply when presenting Health Card as QR codes, rather than engaging in device-based workflows:
 
@@ -440,6 +441,7 @@ When printing or displaying a Health Card using QR codes, let "N" be the total n
 (The reason for representing Health Cards using Numeric Mode QRs instead of Binary Mode (Latin-1) QRs is information density: with Numeric Mode, 20% more data can fit in a given QR, vs Binary Mode. This is because the JWS character set conveys only log_2(65) bits per character (~6 bits); binary encoding requires log_2(256) bits per character (8 bits), which means ~2 wasted bits per character.)
 
 For example:
+
 * a single chunk might produce a QR code like `shc:/56762909524320603460292437404460<snipped for brevity>`
 * in a longer JWS, the second chunk in a set of three might produce a QR code like `shc:/2/3/56762909524320603460292437404460<snipped for brevity>`
 
@@ -448,6 +450,9 @@ When reading a QR code, scanning software can recognize a SMART Health Card from
 ---
 
 # FAQ
+
+## Can a SMART Health Card be used as a form of identification?
+No. SMART Health Cards are designed for use *alongside* existing forms of identification (e.g., a driver's license in person, or an online ID verification service). A SMART Health Card is a non-forgeable digital artifact analogous to a paper record on official letterhead. Concretely, the problem SMART Health Cards solves is one of provenance: a digitally signed SMART Health Card is a credential that guarantees that a specific issuer generated the record. The duty of verifying that the person presenting a Health Card *is* the subject of the data within the Health Card (or is authorized to act on behalf of this data subject) falls to the person or system receiving and validating a Health Card.
 
 ## Which clinical data should be considered in decision-making?
 * The data in Health Cards should focus on communicating "immutable clinical facts".
@@ -462,7 +467,12 @@ When reading a QR code, scanning software can recognize a SMART Health Card from
 ## How can we share conclusions like a "Safe-to-fly Pass", instead of sharing clinical results?
 Decision-making often results in a narrowly-scoped "Pass" that embodies conclusions like "Person X qualifies for international flight between Country A and Country B, according to Rule Set C". While Health Cards are designed to be long-lived and general-purpose, Passes are highly contextual. We are not attempting to standardize "Passes" in this framework, but Health Cards can provide an important verifiable input for the generation of Passes.
 
+## What testing tools are available to validate SMART Health Cards implementations?
 
+The following tools are helpful to validate Health Card artefacts:
+
+* The [HL7 FHIR Validator](https://confluence.hl7.org/display/FHIR/Using+the+FHIR+Validator) can be used to validate the Health Card's FHIR bundle
+* The [Health Cards Validation SDK](https://github.com/microsoft/health-cards-validation-SDK) can be used to validate the various Health Card artifacts.
 
 # Potential Extensions
 
