@@ -1,0 +1,26 @@
+[ req ]
+req_extensions          = v3_issuer
+x509_extensions         = v3_ca
+distinguished_name = req_distinguished_name
+
+[req_distinguished_name]
+
+[ v3_issuer ]
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature
+subjectAltName         = URI:https://smarthealth.cards/examples/issuer
+
+[ v3_issuer_dns ]
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature
+subjectAltName         = DNS:smarthealth.cards
+
+[ v3_issuer_no_SAN ]
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature
+
+[ v3_ca ]
+basicConstraints = CA:TRUE
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid:always,issuer:always
+
