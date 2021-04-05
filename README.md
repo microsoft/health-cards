@@ -1,4 +1,4 @@
-# FORK information
+# SMART Health Cards Fork Information
 
 This [SMART Health Card project](https://github.com/smart-on-fhir/health-cards) fork augments the base project to generate test examples for the companion [validation SDK](https://github.com/microsoft/health-cards-validation-SDK). Modified code is located in the `generate-examples` sub-project.
 
