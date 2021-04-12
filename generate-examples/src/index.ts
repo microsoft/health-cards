@@ -15,8 +15,8 @@ interface BundleInfo {
 }
 
 const exampleBundleInfo: BundleInfo[] = [
-  {url: 'http://build.fhir.org/ig/dvci/vaccine-credential-ig/branches/main/Bundle-Scenario1Bundle.json', issuerIndex: 0},
-  {url: 'http://build.fhir.org/ig/dvci/vaccine-credential-ig/branches/main/Bundle-Scenario2Bundle.json', issuerIndex: 2},
+  {url: 'https://raw.githubusercontent.com/dvci/vaccine-credential-ig/main/examples/Scenario1Bundle.json', issuerIndex: 0},
+  {url: 'https://raw.githubusercontent.com/dvci/vaccine-credential-ig/main/examples/Scenario2Bundle.json', issuerIndex: 2},
   {url: 'https://www.hl7.org/fhir/diagnosticreport-example-ghp.json', issuerIndex: 0}
 ];
 
@@ -132,7 +132,7 @@ async function trimBundleForHealthCard(bundleIn: Bundle) {
 function createHealthCardJwsPayload(fhirBundle: Bundle, types: string[]): Record<string, unknown> {
   return {
     iss: _issuerUrlPrefix + ISSUER_URL + _issuerUrlSuffix + _issuerUrlSuffix2,
-    nbf: new Date().getTime() / 1000, // TODO: add not yet valid
+    nbf: new Date().getTime() / _nbfDivisor,
     vc: {
       '@context': ['https://www.w3.org/2018/credentials/v1'],
       type: [
@@ -288,7 +288,8 @@ program.addOption(new Option('-t, --testcase <testcase>', 'test case to generate
   'invalid_healthcard_uri',
   'qr_chunk_too_big',
   'qr_chunk_unbalanced', // TODO
-  'trailing_chars'
+  'trailing_chars',
+  'nbf_miliseconds'
 ]));
 program.parse(process.argv);
 
@@ -313,6 +314,7 @@ const _issuerUrlSuffix = options.testcase == 'invalid_issuer_url' ? 'invalid_url
 const _issuerUrlSuffix2 = options.testcase == 'issuer_url_with_trailing_slash' ? '/' : '';
 const _qrHeader = options.testcase == 'wrong_qr_header' ? 'shc:' : 'shc:/';
 const _qrMode = options.testcase == 'wrong_qr_mode' ? 'byte' : 'numeric';
+const _nbfDivisor = options.testcase == 'nbf_miliseconds' ? 1 : 1000;
 const _issuerKeyFile = './src/config/' + 
   (options.testcase == 'wrong_issuer_key' ? 'issuer2.jwks.private.json' : 
     (options.testcase == 'wrong_issuer_curve_key' ? 'issuer_wrong_curve.jwks.private.json' : 
