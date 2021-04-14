@@ -4,7 +4,7 @@ import fs from 'fs';
 import got from 'got';
 import jose, { JWK } from 'node-jose';
 import pako, { deflate, deflateRaw } from 'pako';
-import QrCode, { QRCodeSegment } from 'qrcode';
+import QrCode, { QRCodeSegment, QRCodeToStringOptions } from 'qrcode';
 
 
 const ISSUER_URL = process.env.ISSUER_URL || 'smarthealth.cards/examples/issuer' ;
@@ -201,9 +201,11 @@ async function processExampleBundle(exampleBundleInfo: BundleInfo): Promise<{ fh
   const qrSet = jwsChunks.map((c, i, chunks) => toNumericQr(c, i, chunks.length));
   const exampleBundleHealthCardNumericQr = qrSet.map(qr => qr.map(({ data }) => data).join(''));
 
+  const qrCodeOptions: QRCodeToStringOptions = { type: 'svg', errorCorrectionLevel: 'low' };
+  if (_qrVersionOption) qrCodeOptions.version = _qrVersionOption;
   const exampleQrCodes: string[] = await Promise.all(
     qrSet.map((qrSegments): Promise<string> => new Promise((resolve, reject) =>
-      QrCode.toString(qrSegments, { type: 'svg', errorCorrectionLevel: 'low' }, function (err: any, result: string) {
+      QrCode.toString(qrSegments, qrCodeOptions, function (err: any, result: string) {
         if (err) return reject(err);
         resolve(result as string);
       })
@@ -289,7 +291,8 @@ program.addOption(new Option('-t, --testcase <testcase>', 'test case to generate
   'qr_chunk_too_big',
   'qr_chunk_unbalanced', // TODO
   'trailing_chars',
-  'nbf_miliseconds'
+  'nbf_miliseconds',
+  'qr_version_23'
 ]));
 program.parse(process.argv);
 
@@ -315,6 +318,7 @@ const _issuerUrlSuffix2 = options.testcase == 'issuer_url_with_trailing_slash' ?
 const _qrHeader = options.testcase == 'wrong_qr_header' ? 'shc:' : 'shc:/';
 const _qrMode = options.testcase == 'wrong_qr_mode' ? 'byte' : 'numeric';
 const _nbfDivisor = options.testcase == 'nbf_miliseconds' ? 1 : 1000;
+const _qrVersionOption = options.testcase == 'qr_version_23' ? 23 : '';
 const _issuerKeyFile = './src/config/' + 
   (options.testcase == 'wrong_issuer_key' ? 'issuer2.jwks.private.json' : 
     (options.testcase == 'wrong_issuer_curve_key' ? 'issuer_wrong_curve.jwks.private.json' : 
