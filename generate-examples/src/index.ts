@@ -134,11 +134,7 @@ function createHealthCardJwsPayload(fhirBundle: Bundle, types: string[]): Record
     iss: _issuerUrlPrefix + ISSUER_URL + _issuerUrlSuffix + _issuerUrlSuffix2,
     nbf: new Date().getTime() / _nbfDivisor,
     vc: {
-      '@context': ['https://www.w3.org/2018/credentials/v1'],
       type: [
-        'VerifiableCredential',
-        'https://smarthealth.cards#immunization',
-        'https://smarthealth.cards#covid19',
         _healthCardUri,
         ...types
       ],
@@ -328,7 +324,7 @@ const _issuerKeyFile = './src/config/' +
         (options.testcase == 'wrong_issuer_kty_key' ? 'issuer_wrong_kty.jwks.private.json' :
           'issuer.jwks.private.json'))));
 const _issuerSigningKey = JSON.parse(fs.readFileSync(_issuerKeyFile, 'utf-8'));
-const _healthCardUri = options.testcase == 'invalid_healthcard_uri' ? 'https://smarthealth.cards#health-card' : 'https://smarthealth.cards#wrong-health-card';
+const _healthCardUri = options.testcase == 'invalid_healthcard_uri' ? 'https://smarthealth.cards#wrong-health-card' : 'https://smarthealth.cards#health-card';
 
 if (options.outdir) {
   generate(options);

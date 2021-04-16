@@ -216,16 +216,14 @@ Issuer ->> Holder: Holder receives Health Card
 
 The VC structure (scaffold) is shown in the following example.  The Health Cards framework serializes VCs using the compact JWS serialization, where the payload is a compressed set of JWT claims (see [Appendix 3 of RFC7515](https://tools.ietf.org/html/rfc7515#appendix-A.3) for an example using ECDSA P-256 SHA-256, as required by this specification). Specific encoding choices ensure compatibility with standard JWT claims, as described at [https://www.w3.org/TR/vc-data-model/#jwt-encoding](https://www.w3.org/TR/vc-data-model/#jwt-encoding).
 
-The `@context`, `type`, and `credentialSubject` properties are added to the `vc` claim of the JWT. The `issuer` property is represented by the registered JWT `iss` claim and the `issuanceDate` property is represented by the registered JWT `nbf` claim.  Hence, the overall JWS payload matches the following structure (before it is [minified and compressed](#health-cards-are-small)):
+The `type`, and `credentialSubject` properties are added to the `vc` claim of the JWT. The `issuer` property is represented by the registered JWT `iss` claim and the `issuanceDate` property is represented by the registered JWT `nbf` ("not before") claim (encoded as the number of seconds from 1970-01-01T00:00:00Z UTC, as specified by [RFC 7519](https://tools.ietf.org/html/rfc7519)).  Hence, the overall JWS payload matches the following structure (before it is [minified and compressed](#health-cards-are-small)):
 
 ```json
 {
   "iss": "<<Issuer URL>>",
   "nbf": 1591037940,
   "vc": {
-    "@context": ["https://www.w3.org/2018/credentials/v1"],
     "type": [
-      "VerifiableCredential",
       "https://smarthealth.cards#health-card",
       "<<Additional Types>>",
     ],
@@ -253,7 +251,7 @@ To ensure that all Health Cards can be represented in QR Codes, issuers SHALL en
     * payload is compressed with the DEFLATE (see [RFC1951](https://www.ietf.org/rfc/rfc1951.txt)) algorithm before being signed (note, this should be "raw" DEFLATE compression, omitting any zlib or gz headers)
     * payload `.vc.credentialSubject.fhirBundle` is created:
         * without `Resource.id` elements
-        * without `Resource.meta` elements
+        * without `Resource.meta` elements (or if present, `.meta.security` is included and no other fields are included)
         * without `Resource.text` elements
         * without `CodeableConcept.text` elements
         * without `Coding.display` elements
@@ -474,6 +472,11 @@ The following tools are helpful to validate Health Card artefacts:
 * The [HL7 FHIR Validator](https://confluence.hl7.org/display/FHIR/Using+the+FHIR+Validator) can be used to validate the Health Card's FHIR bundle
 * The [Health Cards Validation SDK](https://github.com/microsoft/health-cards-validation-SDK) can be used to validate the various Health Card artifacts.
 
+Other resources that are helpful for learning about and implementing SMART Health Cards include:
+
+* The [code used to generate the examples](https://github.com/smart-on-fhir/health-cards/tree/main/generate-examples) present in the spec.
+* A [Jupyter Notebook walkthrough](https://github.com/dvci/health-cards-walkthrough/blob/main/SMART%20Health%20Cards.ipynb) which demonstrates creating, validating and decoding a SMART Health Card as a QR Code.
+
 # Potential Extensions
 
 ### Standardized presentation workflows
@@ -481,6 +484,7 @@ The spec is currently focused on representing Health Cards in a standardized dat
 
 # References
 
-* DEFLATE Compression: https://www.ietf.org/rfc/rfc1951.txt
+* DEFLATE Compression: https://tools.ietf.org/html/rfc1951
+* JSON Web Token (JWT): https://tools.ietf.org/html/rfc7519
 * JSON Web Key (JWK): https://tools.ietf.org/html/rfc7517
 * JSON Web Key (JWK) Thumbprint: https://tools.ietf.org/html/rfc7638
