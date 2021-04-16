@@ -174,7 +174,7 @@ async function createHealthCardFile(jwsPayload: Record<string, unknown>, keyInde
 
 const SMALLEST_B64_CHAR_CODE = 45; // "-".charCodeAt(0) === 45
 const toNumericQr = (jws: string, chunkIndex: number, totalChunks: number): QRCodeSegment[] => [
-  { data: _qrHeader + ((totalChunks > 1) ? `${chunkIndex + 1}/${totalChunks}/` : ``), mode: 'byte' },
+  { data: _qrHeader + ((totalChunks > 1) ? `${chunkIndex + 1}/${totalChunks}/` : ``), mode: _qrModeHeader }, // anything other than 'byte' throws
   {
     data: jws
       .split('')
@@ -282,6 +282,7 @@ program.addOption(new Option('-t, --testcase <testcase>', 'test case to generate
   'issuer_url_with_trailing_slash',
   'invalid_issuer_url_http',
   'wrong_qr_header',
+//  'wrong_qr_mode_header', not working, because 'shc:/' can only be encoded with one mode
   'wrong_qr_mode',
   'wrong_issuer_key',
   'wrong_issuer_curve_key',
@@ -316,6 +317,7 @@ const _issuerUrlPrefix = options.testcase == 'invalid_issuer_url_http' ? 'http:/
 const _issuerUrlSuffix = options.testcase == 'invalid_issuer_url' ? 'invalid_url' : '';
 const _issuerUrlSuffix2 = options.testcase == 'issuer_url_with_trailing_slash' ? '/' : '';
 const _qrHeader = options.testcase == 'wrong_qr_header' ? 'shc:' : 'shc:/';
+const _qrModeHeader = options.testcase == 'wrong_qr_mode_header' ? 'alphanumeric' : 'byte';
 const _qrMode = options.testcase == 'wrong_qr_mode' ? 'byte' : 'numeric';
 const _nbfDivisor = options.testcase == 'nbf_miliseconds' ? 1 : 1000;
 const _qrVersionOption = options.testcase == 'qr_version_23' ? 23 : '';
