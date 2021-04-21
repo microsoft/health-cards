@@ -162,7 +162,25 @@ const splitJwsIntoChunks = (jws: string): string[] => {
 
 async function createHealthCardFile(jwsPayload: Record<string, unknown>, keyIndex: number = 0): Promise<Record<string, any>> {
   const signer = new Signer({ signingKey: await JWK.asKey(_issuerSigningKey.keys[keyIndex]) });
-  const signed = await signer.signJws(jwsPayload);
+  let signed = await signer.signJws(jwsPayload);
+  if (_noJwsHeaderZip || _noJwsHeaderAlg || _noJwsHeaderKid || _wrongJwsHeaderKid) {
+    // need to modify header
+    const parts = signed.split('.');
+    const header = JSON.parse(Buffer.from(parts[0], 'base64').toString());
+    if (_wrongJwsHeaderKid) {
+      header['kid'] = '0000000000000000000000000000000000000000000';
+    }
+    if (_noJwsHeaderZip) {
+      delete header['zip'];
+    }
+    if (_noJwsHeaderAlg) {
+      delete header['alg'];
+    }
+    if (_noJwsHeaderKid) {
+      delete header['kid'];
+    }
+    signed = [jose.util.base64url.encode(JSON.stringify(header)), parts[1], parts[2]].join('.');
+  }
   return {
     verifiableCredential: [signed],
   };
@@ -274,6 +292,10 @@ program.addOption(new Option('-t, --testcase <testcase>', 'test case to generate
   'no_deflate',
   'invalid_deflate',
   'invalid_jws_format',
+  'no_jws_header_zip',
+  'no_jws_header_alg',
+  'no_jws_header_kid',
+  'wrong_jws_header_kid',
   'invalid_issuer_url',
   'issuer_url_with_trailing_slash',
   'invalid_issuer_url_http',
@@ -309,6 +331,10 @@ const _MAX_CHUNK_SIZE = _MAX_SINGLE_JWS_SIZE - 4;
 const _doDeflate = options.testcase == 'no_deflate' ? false : true;
 const _deflateFunction = options.testcase == 'invalid_deflate' ? pako.deflate : pako.deflateRaw;
 const _jwsFormat = options.testcase == 'invalid_jws_format' ? 'flattened' : 'compact';
+const _noJwsHeaderZip = options.testcase == 'no_jws_header_zip' ? true : false;
+const _noJwsHeaderAlg = options.testcase == 'no_jws_header_alg' ? true : false;
+const _noJwsHeaderKid = options.testcase == 'no_jws_header_kid' ? true : false;
+const _wrongJwsHeaderKid = options.testcase == 'wrong_jws_header_kid' ? true : false;
 const _issuerUrlPrefix = options.testcase == 'invalid_issuer_url_http' ? 'http://' : 'https://';
 const _issuerUrlSuffix = options.testcase == 'invalid_issuer_url' ? 'invalid_url' : '';
 const _issuerUrlSuffix2 = options.testcase == 'issuer_url_with_trailing_slash' ? '/' : '';
