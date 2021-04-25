@@ -3,7 +3,7 @@ import { Option, Command } from 'commander';
 import fs from 'fs';
 import got from 'got';
 import jose, { JWK } from 'node-jose';
-import pako, { deflate, deflateRaw } from 'pako';
+import pako from 'pako';
 import QrCode, { QRCodeSegment, QRCodeToStringOptions } from 'qrcode';
 
 
@@ -212,12 +212,14 @@ async function processExampleBundle(exampleBundleInfo: BundleInfo): Promise<{ fh
 
   const jws = exampleBundleHealthCardFile.verifiableCredential[0] as string;
   const jwsChunks = splitJwsIntoChunks(jws);
-  const qrSet = jwsChunks.map((c, i, chunks) => toNumericQr(c, i, chunks.length));
+  let qrSet = jwsChunks.map((c, i, chunks) => toNumericQr(c, i, chunks.length));
+  if (_singleQrSegment) { 
+    qrSet = qrSet.map(chunk => [{data: (chunk[0].data as string).concat(chunk[1].data as string), mode: _qrModeHeader}]);
+  }
   const exampleBundleHealthCardNumericQr = qrSet.map(qr => qr.map(({ data }) => data).join(''));
 
-  const qrCodeOptions: QRCodeToStringOptions = { type: 'svg', errorCorrectionLevel: 'low' };
-  if (_qrVersionOption) qrCodeOptions.version = _qrVersionOption;
-  const exampleQrCodes: string[] = await Promise.all(
+  const qrCodeOptions: QRCodeToStringOptions = { type: 'svg', errorCorrectionLevel: _qrErrorCorrection };
+    const exampleQrCodes: string[] = await Promise.all(
     qrSet.map((qrSegments): Promise<string> => new Promise((resolve, reject) =>
       QrCode.toString(qrSegments, qrCodeOptions, function (err: any, result: string) {
         if (err) return reject(err);
@@ -311,7 +313,8 @@ program.addOption(new Option('-t, --testcase <testcase>', 'test case to generate
   'qr_chunk_unbalanced', // TODO
   'trailing_chars',
   'nbf_miliseconds',
-  'qr_version_23'
+  'bad_qr_version',
+  'single_qr_segment'
 ]));
 program.parse(process.argv);
 
@@ -341,8 +344,9 @@ const _issuerUrlSuffix2 = options.testcase == 'issuer_url_with_trailing_slash' ?
 const _qrHeader = options.testcase == 'wrong_qr_header' ? 'shc:' : 'shc:/';
 const _qrModeHeader = options.testcase == 'wrong_qr_mode_header' ? 'alphanumeric' : 'byte';
 const _qrMode = options.testcase == 'wrong_qr_mode' ? 'byte' : 'numeric';
+const _singleQrSegment = options.testcase == 'single_qr_segment' ? true : false;
 const _nbfDivisor = options.testcase == 'nbf_miliseconds' ? 1 : 1000;
-const _qrVersionOption = options.testcase == 'qr_version_23' ? 23 : '';
+const _qrErrorCorrection = options.testcase == 'bad_qr_version' ? 'quartile' : 'low';
 const _issuerKeyFile = './src/config/' + 
   (options.testcase == 'wrong_issuer_key' ? 'issuer2.jwks.private.json' : 
     (options.testcase == 'wrong_issuer_curve_key' ? 'issuer_wrong_curve.jwks.private.json' : 
