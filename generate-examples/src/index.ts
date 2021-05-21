@@ -213,6 +213,9 @@ async function processExampleBundle(exampleBundleInfo: BundleInfo): Promise<{ fh
   const jws = exampleBundleHealthCardFile.verifiableCredential[0] as string;
   const jwsChunks = splitJwsIntoChunks(jws);
   let qrSet = jwsChunks.map((c, i, chunks) => toNumericQr(c, i, chunks.length));
+  if (_tooManyQrSegment) {
+    qrSet[0].push({data: "extra", mode: _qrModeHeader});
+  }
   if (_singleQrSegment) { 
     qrSet = qrSet.map(chunk => [{data: (chunk[0].data as string).concat(chunk[1].data as string), mode: _qrModeHeader}]);
   }
@@ -314,7 +317,8 @@ program.addOption(new Option('-t, --testcase <testcase>', 'test case to generate
   'trailing_chars',
   'nbf_miliseconds',
   'bad_qr_version',
-  'single_qr_segment'
+  'single_qr_segment',
+  'too_many_qr_segment'
 ]));
 program.parse(process.argv);
 
@@ -345,6 +349,7 @@ const _qrHeader = options.testcase == 'wrong_qr_header' ? 'shc:' : 'shc:/';
 const _qrModeHeader = options.testcase == 'wrong_qr_mode_header' ? 'alphanumeric' : 'byte';
 const _qrMode = options.testcase == 'wrong_qr_mode' ? 'byte' : 'numeric';
 const _singleQrSegment = options.testcase == 'single_qr_segment' ? true : false;
+const _tooManyQrSegment = options.testcase == 'too_many_qr_segment' ? true : false;
 const _nbfDivisor = options.testcase == 'nbf_miliseconds' ? 1 : 1000;
 const _qrErrorCorrection = options.testcase == 'bad_qr_version' ? 'quartile' : 'low';
 const _issuerKeyFile = './src/config/' + 
