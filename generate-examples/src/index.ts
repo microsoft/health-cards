@@ -313,6 +313,7 @@ program.addOption(new Option('-t, --testcase <testcase>', 'test case to generate
   'wrong_issuer_kty_key',
   'invalid_healthcard_uri',
   'qr_chunk_too_big',
+  'qr_chunk_too_small',
   'qr_chunk_unbalanced', // TODO
   'trailing_chars',
   'nbf_miliseconds',
@@ -333,7 +334,7 @@ console.log('Opts', options);
 // Test case options
 const _OUTPUT_PREFIX = options.testcase ? 'test-' : '';
 const _TRAILING_CHARS = options.testcase == 'trailing_chars' ? ' \t\n ' : '';
-const _MAX_SINGLE_JWS_SIZE = options.testcase == 'qr_chunk_too_big' ? 2500 : MAX_SINGLE_JWS_SIZE;
+const _MAX_SINGLE_JWS_SIZE = options.testcase == 'qr_chunk_too_big' ? 2500 : (options.testcase == 'qr_chunk_too_small') ? 500 : MAX_SINGLE_JWS_SIZE;
 const _MAX_CHUNK_SIZE = _MAX_SINGLE_JWS_SIZE - 4;
 const _doDeflate = options.testcase == 'no_deflate' ? false : true;
 const _deflateFunction = options.testcase == 'invalid_deflate' ? pako.deflate : pako.deflateRaw;
