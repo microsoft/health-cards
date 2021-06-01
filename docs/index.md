@@ -2,7 +2,7 @@
 
 ### Status
 
-Draft implementation guide authored with input from technology, lab, pharmacy, Electronic Health Record, and Immunization Information System vendors.
+Stable first release authored with input from technology, lab, pharmacy, Electronic Health Record, and Immunization Information System vendors.
 
 ### Contributing
 To propose changes, please use GitHub [Issues](https://github.com/smart-on-fhir/health-cards/issues) or create a [Pull Request](https://github.com/smart-on-fhir/health-cards/pulls).
@@ -12,7 +12,6 @@ To propose changes, please use GitHub [Issues](https://github.com/smart-on-fhir/
 This implementation guide provides a framework for "Health Cards", with a short term goal to enable a consumer to receive COVID-19 Vaccination or Lab results and **present these results to another party in a verifiable manner**. Key use cases include conveying point-in-time infection status for return-to-workplace and travel. This approach should also support documentation of immunization status and other health details.
 
 Because we must ensure end-user privacy and because Health Cards must work across organizational and jurisdictional boundaries, we are building on international open standards and decentralized infrastructure.
-
 
 ## Conceptual Model
 
@@ -45,48 +44,18 @@ Despite this broad scope, our *short-term definition of success* requires that w
 * Represent "Health Cards" in a "Health Wallet", focusing on COVID-19 status
 * Ensure that each role (issuer, holder, app) can be implemented by any organization following open standards, provided they sign on to the relevant trust framework
 
-## User Experience
+## User Experience and Data Flow
 
-* **Install** a "Health Wallet" app
-* **Connect** the Health Wallet to an account with the Issuer (optional step)
-* **Save** a Health Card from the Issuer into the Health Wallet
-* **Present** a Health Card to a Verifier
-    * Presentation includes explicit user opt-in and approval
-    * Presentation workflow depends on context (e.g., on-device presentation to a verifier's mobile app, or in-person presentation)
-
-## Demo
-Sometimes it's easiest to learn by seeing. For an end-to-end demonstration including Mobile Wallet, Issuer API, and Verifier, see [c19.cards](https://c19.cards/) (source code [on GitHub](https://github.com/smart-on-fhir/health-cards-tests) -- and if you want to learn how to test your own components against the demo site, see [README.md](https://github.com/smart-on-fhir/health-cards-tests#using-the-hosted-demo-components)).
-
-# Design Considerations
-This section outlines higher-level design considerations. See [Protocol Details](#protocol-details) below for technical details.
-
-## Data Flow
-
-### Connecting Health Wallet to Issuer (optional)
-* Establish a SMART on FHIR authorization with an Issuer including read access to any resources that will be present in Health Cards (e.g., Patient, Immunization, Observation, DiagnosticReport).
-
-### Getting credentials into Health Wallet
-* Required method: File download
-* Required method: Print QR on paper card, or scan QR into software
-* Optional method: [FHIR API Access](#healthwalletissuevc-operation)
-
-### Presenting credentials to Verifier
-* Optional method: QR presentation
-* Optional method: On-device SDKs (e.g., for verifier-to-holder app-to-app communications)
+* **User Receives** a Health Card from an Issuer. The Health Card is a signed data artifact that the user can obtain through any of these methods:
+    * issuer offers a Health Card on paper or PDF, including a QR code (required method)
+    * issuer offers a Health Card for download as a `.smart-health-card` file (required method)
+    * issuer hosts a Health Card for [FHIR API access](#healthwalletissuevc-operation) via a compatible Health Wallet application. This workflow includes a SMART on FHIR authorization step with an Issuer, where the user grants read access to any resources that will be present in Health Cards (e.g., `Patient`, `Immunization`, `Observation`, `DiagnosticReport`)
+* **User Saves** a Health Card, whether on paper or digitally.
+* **User Presents** a Health Card to a Verifier. Presentation includes explicit user opt-in and approval, and may involve displaying a QR code, sharing a file, or using an on-device SDK (e.g., for verifier-to-holder app-to-app communications)
 
 ## Trust
 
-Which issuers can participate, which test results should be considered, and how do verifiers learn this information?
-
-At a _pilot project level_:
-
-### Which Issuers can participate?
-* We'll work with a willing set of issuers and define expectations/requirements
-* Verifiers will learn the list of participating issuers out of band; each issuer will be associated with a public URL
-* Verifiers will discover public keys associated with an issuer via `/.well-known/jwks.json` URLs
-* For transparency, we'll publish a list of participating organizations in a public directory
-* In a _post-pilot deployment_, a network of participants would define and agree to a formal Trust Framework
-
+Anyone can _issue_ Health Cards, and every verifier can make its own decision about which issuers to _trust_. A "trust framework" can help verifiers to externalize these decisions and drive toward more consistent practices. The SMART Health Cards IG is designed to operate independent of any trust framework, while allowing trust frameworks to be layered on top. We anticipate such frameworks will emerge to meet different jurisdictional and use case driven requirements. In all cases, verifiers can discover public keys associated with an issuer via `/.well-known/jwks.json` URLs.
 
 ## Privacy
 
@@ -216,7 +185,7 @@ Issuer ->> Holder: Holder receives Health Card
 
 The VC structure (scaffold) is shown in the following example.  The Health Cards framework serializes VCs using the compact JWS serialization, where the payload is a compressed set of JWT claims (see [Appendix 3 of RFC7515](https://tools.ietf.org/html/rfc7515#appendix-A.3) for an example using ECDSA P-256 SHA-256, as required by this specification). Specific encoding choices ensure compatibility with standard JWT claims, as described at [https://www.w3.org/TR/vc-data-model/#jwt-encoding](https://www.w3.org/TR/vc-data-model/#jwt-encoding).
 
-The `type`, and `credentialSubject` properties are added to the `vc` claim of the JWT. The `issuer` property is represented by the registered JWT `iss` claim and the `issuanceDate` property is represented by the registered JWT `nbf` ("not before") claim (encoded as the number of seconds from 1970-01-01T00:00:00Z UTC, as specified by [RFC 7519](https://tools.ietf.org/html/rfc7519)).  Hence, the overall JWS payload matches the following structure (before it is [minified and compressed](#health-cards-are-small)):
+The `type`, and `credentialSubject` properties are added to the `vc` claim of the JWT. The `type` values are defined in [Credential Types](https://smarthealth.cards/vocabulary/); the `https://smarthealth.cards#health-card` SHALL be present; other types SHOULD be included when they apply. The `issuer` property is represented by the registered JWT `iss` claim and the `issuanceDate` property is represented by the registered JWT `nbf` ("not before") claim (encoded as the number of seconds from 1970-01-01T00:00:00Z UTC, as specified by [RFC 7519](https://tools.ietf.org/html/rfc7519)).  Hence, the overall JWS payload matches the following structure (before it is [minified and compressed](#health-cards-are-small)):
 
 ```json
 {
@@ -241,7 +210,7 @@ The `type`, and `credentialSubject` properties are added to the `vc` claim of th
 
 ### Health Cards are Small
 
-To ensure that all Health Cards can be represented in QR Codes, issuers SHALL ensure that the following constraints apply at the time of issuance:
+To ensure that all Health Cards can be represented in QR codes, issuers SHALL ensure that the following constraints apply at the time of issuance:
 
 * JWS Header
     * header includes `alg: "ES256"`
@@ -281,7 +250,7 @@ To facilitate this workflow, the issuer can include a link to help the user down
 
 ### via QR (Print or Scan)
 
-Alternatively, issuers can make the Health Card available **embedded in a QR code** (for instance, printed on a paper-based vaccination record or after-visit summary document). See [details](#every-health-card-can-be-embedded-in-a-qr-code).
+Alternatively, issuers can make any individual JWS inside a Health Card available **embedded in a QR code** (for instance, printed on a paper-based vaccination record or after-visit summary document). See [details](#every-health-card-can-be-embedded-in-a-qr-code).
 
 Finally, the Health Wallet asks the user if they want to save any/all of the supplied credentials.
 
@@ -290,7 +259,7 @@ Finally, the Health Wallet asks the user if they want to save any/all of the sup
 For a more seamless user experience when FHIR API connections are already in place, results may also be conveyed through a FHIR API `$health-cards-issue` operation defined [here](../artifacts/operation-patient-i-health-cards-issue.json). For issuers that support SMART on FHIR access, the Health Wallet MAY request authorization with SMART on FHIR scopes (e.g., `launch/patient patient/Immunization.read` for an Immunization use case). This allows the Health Wallet to automatically request issuance of VCs, including requests for periodic updates.
 
 #### Discovery of FHIR Support
-A SMART on FHIR Server advertises support for issuing VCs according to this specification by adding the `health-cards` capability to its `/.well-known/smart-configuration` JSON file. For example:
+A SMART on FHIR Server capable of issuing VCs according to this specification SHALL advertise its support by adding the `health-cards` capability to its `/.well-known/smart-configuration` JSON file. For example:
 
 ```json
 {
@@ -395,11 +364,11 @@ In the response, an optional repeating `resourceLink` parameter can capture the 
 
 In this step, the verifier asks the user to share a COVID-19 result. A Health Card containing the result can be conveyed by presenting a QR code; by uploading a file; or by leveraging device-specific APIs. Over time, we will endeavor to standardize presentation workflows including device-specific patterns and web-based exchange.
 
-## Every Health Card can be embedded in a QR Code
+## Every Health Card can be embedded in a QR code
 
-Every Health Card can be embedded in one or more QR Codes. When embedding a Health Card in a QR Code, we aim to ensure that printed (or electronically displayed) codes are usable at physical dimensions of 40mmx40mm. This constraint allows us to use QR codes up to Version 22, at 105x105 modules. When embedding a Health Card in a QR Code, the same JWS strings that appear as `.verifiableCredential[]` entries in a `.smart-health-card` file SHALL be encoded as Numerical Mode QR codes consisting of the digits 0-9 (see ["Encoding Chunks as QR Codes"](#encoding-chunks-as-qr-codes)).
+Each JWS string that appears in the `.verifiableCredential[]` of a `.smart-health-card` file can be embedded in one or more QR codes. We aim to ensure that printed (or electronically displayed) codes are usable at physical dimensions of 40mmx40mm. This constraint allows us to use QR codes up to Version 22, at 105x105 modules.  When embedding a JWS string in QR codes, the JWS string SHALL be encoded as Numerical Mode QR codes consisting of the digits 0-9 (see ["Encoding Chunks as QR codes"](#encoding-chunks-as-qr-codes)).
 
-Ensuring Health Cards can be presented as QR Codes:
+Ensuring Health Cards can be presented as QR codes:
 
 * Allows basic storage and sharing of Health Cards for users without a smartphone
 * Allows smartphone-enabled users to print a usable backup
@@ -417,19 +386,19 @@ The following limitations apply when presenting Health Card as QR codes, rather 
 
 ### Chunking
 
-Commonly, Health Cards will fit in a single V22 QR code.  Any JWS longer than 1195 characters is split into "chunks" of length 1191 or smaller; each chunk is then encoded as a separate QR code to ensure ease of scanning. Each chunk is numerically encoded and prefixed with an ordinal as well as the total number of chunks required to re-assemble the JWS, as described below.
+Commonly, Health Cards will fit in a single V22 QR code.  Any JWS longer than 1195 characters SHALL be split into "chunks" of length 1191 or smaller; each chunk SHALL be encoded as a separate QR code of V22 or lower, to ensure ease of scanning. Each chunk SHALL be numerically encoded and prefixed with an ordinal as well as the total number of chunks required to re-assemble the JWS, as described below.
 
-To ensure the best user experience when producing and consuming multiple QR Codes:
+To ensure the best user experience when producing and consuming multiple QR codes:
 
-* Producers of QR Codes SHOULD balance the sizes of chunks. For example, if a JWS is 1200 characters long, producers should create two ~600 character chunks rather than a 1191 character chunk and a 9 character chunk.
-* Consumers of QR Codes SHOULD allow for scanning the multiple QR Codes in any order. Once the full set is scanned, the JWS can be assembled and validated. 
+* Producers of QR codes SHOULD balance the sizes of chunks. For example, if a JWS is 1200 characters long, producers should create two ~600 character chunks rather than a 1191 character chunk and a 9 character chunk.
+* Consumers of QR codes SHOULD allow for scanning the multiple QR codes in any order. Once the full set is scanned, the JWS can be assembled and validated.
 
-### Encoding Chunks as QR Codes
+### Encoding Chunks as QR codes
 
-When printing or displaying a Health Card using QR codes, let "N" be the total number of chunks required, and let "C" be a variable indicating the index of the current chunk. Each chunk of the JWS string value is represented as a QR with two data segments:
+When printing or displaying a Health Card using QR codes, let "N" be the total number of chunks required, and let "C" be a variable indicating the index of the current chunk. Each chunk of the JWS string value SHALL be represented as a QR with two data segments:
 
 1. A segment encoded with `bytes` mode consisting of 
-    * the fixed string `shc:/` 
+    * the fixed string `shc:/` (registered as an [IANA scheme](https://www.iana.org/assignments/uri-schemes/prov/shc))
     * plus (only if more than one chunk is required)
         *  decimal representation of "C" (e.g., `1` for the first chunk, `2` for the second chunk, and so on)
         *  plus the fixed string `/`
@@ -476,7 +445,11 @@ The following tools are helpful to validate Health Card artefacts:
 Other resources that are helpful for learning about and implementing SMART Health Cards include:
 
 * The [code used to generate the examples](https://github.com/smart-on-fhir/health-cards/tree/main/generate-examples) present in the spec.
-* A [Jupyter Notebook walkthrough](https://github.com/dvci/health-cards-walkthrough/blob/main/SMART%20Health%20Cards.ipynb) which demonstrates creating, validating and decoding a SMART Health Card as a QR Code.
+* A [Jupyter Notebook walkthrough](https://github.com/dvci/health-cards-walkthrough/blob/main/SMART%20Health%20Cards.ipynb) and [demo portals](https://demo-portals.smarthealth.cards/) which demonstrate creating, validating and decoding a SMART Health Card as a QR code.
+
+## What software libraries are available to work with SMART Health Cards?
+
+The [Libraries for SMART Health Cards](https://github.com/smart-on-fhir/health-cards/wiki/Libraries-for-SMART-Health-Cards) wiki page includes suggestions about useful libraries.
 
 # Potential Extensions
 
@@ -485,8 +458,8 @@ The spec is currently focused on representing Health Cards in a standardized dat
 
 # References
 
-* Fast Health Interoperability Resources (FHIR): https://hl7.org/fhir/
-* DEFLATE Compression: https://tools.ietf.org/html/rfc1951
-* JSON Web Token (JWT): https://tools.ietf.org/html/rfc7519
-* JSON Web Key (JWK): https://tools.ietf.org/html/rfc7517
-* JSON Web Key (JWK) Thumbprint: https://tools.ietf.org/html/rfc7638
+* Fast Health Interoperability Resources (FHIR): [https://hl7.org/fhir/](https://hl7.org/fhir/)
+* DEFLATE Compression: [https://tools.ietf.org/html/rfc1951](https://tools.ietf.org/html/rfc1951)
+* JSON Web Token (JWT): [https://tools.ietf.org/html/rfc7519](https://tools.ietf.org/html/rfc7519)
+* JSON Web Key (JWK): [https://tools.ietf.org/html/rfc7517](https://tools.ietf.org/html/rfc7517)
+* JSON Web Key (JWK) Thumbprint: [https://tools.ietf.org/html/rfc7638](https://tools.ietf.org/html/rfc7638)

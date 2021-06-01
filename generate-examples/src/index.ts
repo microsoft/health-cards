@@ -6,8 +6,7 @@ import jose, { JWK } from 'node-jose';
 import pako from 'pako';
 import QrCode, { QRCodeSegment, QRCodeToStringOptions } from 'qrcode';
 
-
-const ISSUER_URL = process.env.ISSUER_URL || 'smarthealth.cards/examples/issuer' ;
+const ISSUER_URL = process.env.ISSUER_URL || 'spec.smarthealth.cards/examples/issuer' ;
 
 interface BundleInfo {
   url: string;
