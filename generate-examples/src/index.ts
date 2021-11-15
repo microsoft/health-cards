@@ -49,6 +49,16 @@ export interface HealthCard {
   };
 }
 
+const concatUintArrays = (arrays: Uint8Array[]) => {
+  let result = new Uint8Array(arrays.reduce((acc, value) => acc + value.length, 0));
+  let length = 0;
+  for(let array of arrays) {
+    result.set(array, length);
+    length += array.length;
+  }
+  return result;
+}
+
 export class Signer {
   public keyStore: jose.JWK.KeyStore;
   public signingKey: JWK.Key;
@@ -59,11 +69,13 @@ export class Signer {
   }
 
   async signJws(idTokenPayload: Record<string, unknown>, deflate = _doDeflate): Promise<string> {
-    const bodyString = JSON.stringify(idTokenPayload);
-
+    let bodyString = JSON.stringify(idTokenPayload);
+    if (_deflatedPrefix) {
+      const bodyUint8Array = concatUintArrays([_deflatedPrefix, Buffer.from(bodyString)]);
+      bodyString = Buffer.from(bodyUint8Array).toString();
+    }
     const fields = deflate ? { zip: 'DEF' } : {};
     const body = deflate ? _deflateFunction(bodyString) : bodyString;
-
     const signed = await jose.JWS.createSign({ format: _jwsFormat, fields }, this.signingKey)
       .update(Buffer.from(body))
       .final();
@@ -318,7 +330,8 @@ program.addOption(new Option('-t, --testcase <testcase>', 'test case to generate
   'nbf_miliseconds',
   'bad_qr_version',
   'single_qr_segment',
-  'too_many_qr_segment'
+  'too_many_qr_segment',
+  'utf8_bom_prefix'
 ]));
 program.parse(process.argv);
 
@@ -360,6 +373,7 @@ const _issuerKeyFile = './src/config/' +
           'issuer.jwks.private.json'))));
 const _issuerSigningKey = JSON.parse(fs.readFileSync(_issuerKeyFile, 'utf-8'));
 const _healthCardUri = options.testcase == 'invalid_healthcard_uri' ? 'https://smarthealth.cards#wrong-health-card' : 'https://smarthealth.cards#health-card';
+const _deflatedPrefix = options.testcase == 'utf8_bom_prefix' ? Buffer.from([0xEF,0xBB,0xBF]) : undefined;
 
 if (options.outdir) {
   generate(options);
