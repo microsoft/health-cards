@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main
-        uses: actions/checkout@v1
+        uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1.2.0
       - name: Build examples
         run: |
           cd generate-examples
@@ -25,7 +25,7 @@ jobs:
           sudo chown -R $USER site
           cp -r generate-examples/issuer/ site/examples/issuer
       - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@4.0.0
+        uses: JamesIves/github-pages-deploy-action@049a95c516cd5723d8cfde79dc7a79fcdcbd6c97 # 4.0.0
         with:
           folder: site
           branch: gh-pages
